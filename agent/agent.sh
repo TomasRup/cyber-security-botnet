@@ -1,4 +1,5 @@
 #!/bin/sh
+set -e
 
 HOST=10.3.3.250:8080/commands
 TIMEOUT=3
