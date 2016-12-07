@@ -1,4 +1,4 @@
-$commands_host = "10.3.3.250:8080/commands"
+$commands_host = "localhost:8080/commands"
 $timeout_time = 3
 
 while ($true) {

