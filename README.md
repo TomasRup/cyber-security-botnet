@@ -1,3 +1,4 @@
 # cyber-security-botnet
 
-http://botnet-agent-injection.surge.sh
+Downloaders: http://botnet-agent-injection.surge.sh
+Admin Panel: http://ec2-35-156-198-4.eu-central-1.compute.amazonaws.com:8080/
