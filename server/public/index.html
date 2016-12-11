@@ -10,7 +10,6 @@
         <script src="https://cdn.jsdelivr.net/lodash/4.17.2/lodash.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.17.1/moment.min.js"></script>
         <link rel="stylesheet" href="https://unpkg.com/purecss@0.6.0/build/pure-min.css">
-
         <style>
             table {
                 width: 100%;
@@ -35,7 +34,7 @@
                         <tr>
                             <th>#</th>
                             <th>OS</th>
-                            <th>Repeat command</th>
+                            <th>Executed Once</th>
                             <th>Command</th>
                             <th>Actions</th>
                         </tr>
@@ -50,7 +49,7 @@
                             <td>
                                 {{! c.os }}
                             <td>
-                                {{! c.repeat }}
+                                {{! c.repeat ? 'No' : 'Yes' }}
                             </td>
                             <td>
                                 {{! c.cmd }}
@@ -66,9 +65,32 @@
                             <td>
                                 New
                             </td>
-                            <td></td>
                             <td>
-                                <input type="checkbox" id="repeat_val" v-model="toggle">
+                                <label for="unix-option" class="pure-radio">
+                                    <input id="unix-option" 
+                                        type="radio" 
+                                        value="unix" 
+                                        v-model="os">
+                                    *NIX
+                                </label>
+
+                                <label for="windows-option" class="pure-radio">
+                                    <input 
+                                        id="windows-option"
+                                        type="radio" 
+                                        value="windows"
+                                        v-model="os">
+                                    WIN
+                                </label>
+                            </td>
+                            <td>
+                                <label for="execute-once">
+                                    <input
+                                        id="execute-once"
+                                        type="checkbox" 
+                                        v-model="executeOnce">
+                                    Yes 
+                                 </label>
                             </td>
 
                             <td>
@@ -80,15 +102,10 @@
                                 </form>
                             </td>
                             <td>
-                                <button v-on:click="addNew('windows')"
+                                <button v-on:click="addNew()"
                                         type="submit"
                                         class="pure-button pure-button-primary">
-                                    Add WIN
-                                </button>
-                                <button v-on:click="addNew('unix')"
-                                        type="submit"
-                                        class="pure-button pure-button-primary">
-                                    Add *NIX
+                                    Add
                                 </button>
                             </td>
                         </tr>
@@ -130,18 +147,28 @@
                     el: '#commands',
                     data: {
                         commands: [],
-                        newCommand: undefined
+                        newCommand: undefined,
+                        executeOnce: false,
+                        os: 'unix'
                     },
                     methods: {
                         remove: function(c) {
                             $.ajax({
-                                url: '/commands_management?key=' + c.key + '&os=' + c.os,
+                                url: '/commands_management?key=' 
+                                    + c.key 
+                                    + '&os=' + c.os,
                                 type: 'DELETE'
                             });
                         },
                         addNew: function(os) {
                             $.ajax({
-                                url: '/commands_management?cmd=' + this.newCommand + '&os=' + os + '&repeat=' + this.toggle,
+                                url: '/commands_management'
+                                    + '?cmd=' 
+                                    + this.newCommand 
+                                    + '&os=' 
+                                    + this.os 
+                                    + '&repeat=' 
+                                    + !this.executeOnce,
                                 type: 'POST'
                             });
                         }
