@@ -35,6 +35,7 @@
                         <tr>
                             <th>#</th>
                             <th>OS</th>
+                            <th>Repeat command</th>
                             <th>Command</th>
                             <th>Actions</th>
                         </tr>
@@ -48,6 +49,8 @@
                             </td>
                             <td>
                                 {{! c.os }}
+                            <td>
+                                {{! c.repeat }}
                             </td>
                             <td>
                                 {{! c.cmd }}
@@ -65,21 +68,25 @@
                             </td>
                             <td></td>
                             <td>
+                                <input type="checkbox" id="repeat_val" v-model="toggle">
+                            </td>
+
+                            <td>
                                 <form class="pure-form">
-                                    <input id="name" 
-                                            type="text" 
+                                    <input id="name"
+                                            type="text"
                                             placeholder="Command"
                                             v-model="newCommand">
                                 </form>
                             </td>
                             <td>
-                                <button v-on:click="addNew('windows')" 
-                                        type="submit" 
+                                <button v-on:click="addNew('windows')"
+                                        type="submit"
                                         class="pure-button pure-button-primary">
                                     Add WIN
                                 </button>
-                                <button v-on:click="addNew('unix')" 
-                                        type="submit" 
+                                <button v-on:click="addNew('unix')"
+                                        type="submit"
                                         class="pure-button pure-button-primary">
                                     Add *NIX
                                 </button>
@@ -134,7 +141,7 @@
                         },
                         addNew: function(os) {
                             $.ajax({
-                                url: '/commands_management?cmd=' + this.newCommand + '&os=' + os,
+                                url: '/commands_management?cmd=' + this.newCommand + '&os=' + os + '&repeat=' + this.toggle,
                                 type: 'POST'
                             });
                         }
@@ -153,7 +160,8 @@
                                         return commands.concat(_.map(nestedCommands, function(cmd, key) {
                                             return {
                                                 os: os,
-                                                cmd: cmd,
+                                                cmd: cmd[0],
+                                                repeat: cmd[1],
                                                 key: key
                                             };
                                         }));

