@@ -7,5 +7,5 @@ This is a demonstration of a botnet. The system is divided into three parts:
 3) Malware - the purpose of malware here is to get the agent on as many computers as possible, so it becomes zombied. In this implementation, malware is a mock website, that suggests users to download an antivirus system for your selected operating system. Once you download the installer, it downloads the agent and makes sure it starts within next reboot.
 
 ## URLs
-Malware web (you can open it safely, just don't click on 'download'): http://botnet-agent-injection.surge.sh
-Admin Panel: http://ec2-35-156-198-4.eu-central-1.compute.amazonaws.com:8080/
+a) Malware web (you can open it safely, just don't click on 'download'): http://botnet-agent-injection.surge.sh
+b) Admin Panel: http://ec2-35-156-198-4.eu-central-1.compute.amazonaws.com:8080/
