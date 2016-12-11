@@ -1,14 +1,12 @@
-'''
+"""
     This is a botnet server implementation.
-'''
+"""
 
 
 import tornado.ioloop
 import tornado.web
-
 import tornado.options
 from tornado.options import options, define
-import httpagentparser
 import json
 import time
 import os
