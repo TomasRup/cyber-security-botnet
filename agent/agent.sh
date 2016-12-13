@@ -6,6 +6,6 @@ TIMEOUT=3
 
 while true; do
     EXECUTE_COMMANDS=$(curl -s -H "Accept: application/json" -H "Content-Type: application/json" $HOST)
-    eval $EXECUTE_COMMANDS
+    eval $EXECUTE_COMMANDS || true
     sleep $TIMEOUT
 done
